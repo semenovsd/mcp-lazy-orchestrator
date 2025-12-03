@@ -1,4 +1,4 @@
-# MCP Lazy Orchestrator
+# Docker MCP Orchestrator
 
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
@@ -32,7 +32,7 @@ When using **Docker MCP Toolkit** with Cursor, Claude Desktop, or other MCP clie
 
 ## ✅ The Solution
 
-**MCP Lazy Orchestrator** acts as a lightweight meta-server that:
+**Docker MCP Orchestrator** acts as a lightweight meta-server that:
 
 1. **Exposes only 8 orchestration tools** (instead of 100+)
 2. **Enables/disables servers on-demand** via Docker MCP CLI
@@ -49,7 +49,7 @@ When using **Docker MCP Toolkit** with Cursor, Claude Desktop, or other MCP clie
                            │
                            ▼
 ┌─────────────────────────────────────────────────────────┐
-│              MCP Lazy Orchestrator                       │
+│              Docker MCP Orchestrator                       │
 │   • list_available_servers()                            │
 │   • activate_server(name)                               │
 │   • deactivate_server(name)                             │
@@ -89,8 +89,8 @@ When using **Docker MCP Toolkit** with Cursor, Claude Desktop, or other MCP clie
 
 ```bash
 # Clone the repository
-git clone https://github.com/semenovsd/mcp-lazy-orchestrator.git
-cd mcp-lazy-orchestrator
+git clone https://github.com/semenovsd/docker-mcp-orchestrator.git
+cd docker-mcp-orchestrator
 
 # Install with pip
 pip install -e .
