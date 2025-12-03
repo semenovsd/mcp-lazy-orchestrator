@@ -1,4 +1,4 @@
-# MCP Lazy Orchestrator
+# Docker MCP Orchestrator
 
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
@@ -32,7 +32,7 @@
 
 ## ✅ Решение
 
-**MCP Lazy Orchestrator** работает как лёгкий мета-сервер, который:
+**Docker MCP Orchestrator** работает как лёгкий мета-сервер, который:
 
 1. **Экспортирует только 8 инструментов оркестрации** (вместо 100+)
 2. **Включает/выключает серверы по требованию** через Docker MCP CLI
@@ -49,7 +49,7 @@
                            │
                            ▼
 ┌─────────────────────────────────────────────────────────┐
-│              MCP Lazy Orchestrator                       │
+│              Docker MCP Orchestrator                       │
 │   • list_available_servers()                            │
 │   • activate_server(name)                               │
 │   • deactivate_server(name)                             │
@@ -89,8 +89,8 @@
 
 ```bash
 # Клонируйте репозиторий
-git clone https://github.com/semenovsd/mcp-lazy-orchestrator.git
-cd mcp-lazy-orchestrator
+git clone https://github.com/semenovsd/docker-mcp-orchestrator.git
+cd docker-mcp-orchestrator
 
 # Установите через pip
 pip install -e .
