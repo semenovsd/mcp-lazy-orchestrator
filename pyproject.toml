@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "docker-mcp-orchestrator"
-version = "1.0.0"
+version = "2.0.0"
 description = "Reduce MCP token usage by 90%+ — Load Docker MCP servers on-demand"
 readme = "README.md"
 license = {text = "CC-BY-NC-4.0"}
@@ -38,6 +38,7 @@ classifiers = [
 dependencies = [
     "mcp>=1.0.0",
     "pydantic>=2.0.0",
+    "pyyaml>=6.0.0",
 ]
 
 [project.optional-dependencies]
@@ -64,6 +65,7 @@ include = [
     "/src",
     "/docs",
     "/config",
+    "/capabilities",
     "/README.md",
     "/LICENSE",
 ]

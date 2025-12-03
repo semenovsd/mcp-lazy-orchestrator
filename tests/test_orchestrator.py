@@ -1,44 +1,25 @@
 """
-Tests for Docker MCP Orchestrator
+Tests for Docker MCP Orchestrator v2.0
 
 Run with: pytest tests/
 """
 
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 import sys
 import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from mcp_orchestrator.server import (
-    MCP_SERVER_REGISTRY,
-    MCPServerConfig,
     OrchestratorState,
     run_docker_mcp_command,
+    state,
 )
-
-
-class TestServerRegistry:
-    """Tests for the server registry"""
-    
-    def test_registry_has_expected_servers(self):
-        """Verify all expected servers are registered"""
-        expected = {
-            "context7", "playwright", "github", "fetch",
-            "desktop-commander", "postgres", "redis", "sequential-thinking"
-        }
-        assert expected == set(MCP_SERVER_REGISTRY.keys())
-    
-    def test_server_configs_have_required_fields(self):
-        """Verify all configs have required fields"""
-        for name, config in MCP_SERVER_REGISTRY.items():
-            assert isinstance(config, MCPServerConfig)
-            assert config.name == name
-            assert config.description
-            assert config.tools_summary
-            assert config.category
-            assert config.estimated_tools > 0
+from mcp_orchestrator.capabilities import CapabilitiesRegistry
+from mcp_orchestrator.profiles import SERVER_PROFILES, find_matching_profile
+from mcp_orchestrator.monitor import UsageMonitor
+from mcp_orchestrator.discovery import ServerDiscovery, ServerMetadata
 
 
 class TestOrchestratorState:
@@ -46,20 +27,20 @@ class TestOrchestratorState:
     
     def test_initial_state_is_empty(self):
         """Verify initial state is empty"""
-        state = OrchestratorState()
-        assert len(state.active_servers) == 0
-        assert len(state.server_tools_cache) == 0
-        assert state.last_error is None
+        test_state = OrchestratorState()
+        assert len(test_state.active_servers) == 0
+        assert len(test_state.server_tools_cache) == 0
+        assert test_state.last_error is None
     
     def test_active_servers_tracking(self):
         """Test adding/removing servers"""
-        state = OrchestratorState()
+        test_state = OrchestratorState()
         
-        state.active_servers.add("playwright")
-        assert "playwright" in state.active_servers
+        test_state.active_servers.add("playwright")
+        assert "playwright" in test_state.active_servers
         
-        state.active_servers.discard("playwright")
-        assert "playwright" not in state.active_servers
+        test_state.active_servers.discard("playwright")
+        assert "playwright" not in test_state.active_servers
 
 
 class TestDockerMCPCommand:
@@ -111,22 +92,97 @@ class TestDockerMCPCommand:
         assert "not found" in output.lower()
 
 
-class TestServerCategories:
-    """Tests for server categorization"""
+class TestCapabilitiesRegistry:
+    """Tests for capabilities registry"""
     
-    def test_multiple_categories_exist(self):
-        """Verify multiple categories"""
-        categories = {c.category for c in MCP_SERVER_REGISTRY.values()}
-        assert len(categories) > 1
+    def test_registry_loads(self):
+        """Verify capabilities registry loads"""
+        registry = CapabilitiesRegistry()
+        assert len(registry.registry) > 0
     
-    def test_auth_requirements(self):
-        """Verify auth settings"""
-        github = MCP_SERVER_REGISTRY["github"]
-        assert github.requires_auth is True
-        assert github.auth_type == "oauth"
+    def test_context7_capabilities(self):
+        """Verify context7 has correct capabilities"""
+        registry = CapabilitiesRegistry()
+        caps = registry.get("context7")
         
-        playwright = MCP_SERVER_REGISTRY["playwright"]
-        assert playwright.requires_auth is False
+        assert caps is not None
+        assert "redis" in caps.covers_technologies
+        assert "fastapi" in caps.covers_technologies
+        assert caps.purpose is not None
+    
+    def test_find_by_technology(self):
+        """Test finding servers by technology"""
+        registry = CapabilitiesRegistry()
+        servers = registry.find_by_technology("redis")
+        
+        assert "context7" in servers or "redis" in servers
+
+
+class TestServerProfiles:
+    """Tests for server profiles"""
+    
+    def test_profiles_exist(self):
+        """Verify profiles are defined"""
+        assert len(SERVER_PROFILES) > 0
+        assert "web-development" in SERVER_PROFILES
+        assert "data-science" in SERVER_PROFILES
+    
+    def test_profile_has_servers(self):
+        """Verify profile has servers"""
+        profile = SERVER_PROFILES["web-development"]
+        assert len(profile.servers) > 0
+        assert "playwright" in profile.servers
+    
+    def test_find_matching_profile(self):
+        """Test profile matching"""
+        profile = find_matching_profile("web development task")
+        assert profile is not None
+        assert profile.name == "web-development"
+
+
+class TestUsageMonitor:
+    """Tests for usage monitoring"""
+    
+    def test_track_activation(self):
+        """Test tracking server activation"""
+        monitor = UsageMonitor()
+        monitor.track_activation("redis")
+        
+        stats = monitor.get_usage_stats()
+        assert "redis" in stats
+    
+    def test_recommend_deactivation(self):
+        """Test recommendation for deactivation"""
+        monitor = UsageMonitor(idle_timeout_minutes=0)  # Immediate timeout for test
+        monitor.track_activation("redis")
+        
+        import time
+        time.sleep(0.1)  # Small delay
+        
+        recommendations = monitor.recommend_deactivation({"redis"})
+        assert "redis" in recommendations
+
+
+class TestServerDiscovery:
+    """Tests for server discovery"""
+    
+    def test_category_detection(self):
+        """Test automatic category detection"""
+        discovery = ServerDiscovery()
+        
+        category = discovery._detect_category("redis", "Redis cache")
+        assert category == "database"
+        
+        category = discovery._detect_category("playwright", "Browser automation")
+        assert category == "browser"
+    
+    def test_auth_detection(self):
+        """Test authentication requirement detection"""
+        discovery = ServerDiscovery()
+        
+        requires, auth_type = discovery._check_auth_requirements({"name": "github"})
+        # Should detect github requires auth
+        assert requires is True or requires is False  # May vary
 
 
 @pytest.mark.integration

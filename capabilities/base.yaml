@@ -1,0 +1,150 @@
+# Capabilities Registry
+# Связь технологий с MCP серверами
+
+servers:
+  context7:
+    purpose: "Up-to-date library documentation"
+    covers_technologies:
+      - redis
+      - postgres
+      - fastapi
+      - django
+      - react
+      - vue
+      - kubernetes
+      - sqlalchemy
+      - pytest
+      - celery
+      - docker
+      - nginx
+      - python
+      - javascript
+      - typescript
+      - node
+      - express
+      - flask
+      - tornado
+      - aiohttp
+      - requests
+      - pandas
+      - numpy
+      - tensorflow
+      - pytorch
+      - opencv
+    when_to_use: "BEFORE writing code - get current API docs"
+    tools_preview:
+      - resolve-library-id
+      - get-library-docs
+    related_servers: []
+    auto_activate_with:
+      - redis
+      - postgres
+      - playwright
+      - github
+  
+  redis:
+    purpose: "Redis database operations"
+    covers_technologies:
+      - caching
+      - sessions
+      - pub/sub
+      - queues
+      - locks
+    when_to_use: "Direct Redis commands and data management"
+    tools_preview:
+      - redis_get
+      - redis_set
+      - redis_del
+      - redis_keys
+      - redis_hget
+      - redis_hset
+    related_servers:
+      - context7
+  
+  postgres:
+    purpose: "PostgreSQL database access"
+    covers_technologies:
+      - sql
+      - database
+      - queries
+      - postgresql
+    when_to_use: "Database queries and schema operations"
+    tools_preview:
+      - query
+    related_servers:
+      - context7
+  
+  playwright:
+    purpose: "Browser automation"
+    covers_technologies:
+      - browser
+      - screenshots
+      - scraping
+      - testing
+      - e2e
+    when_to_use: "Web interaction, JS-heavy sites, E2E testing"
+    tools_preview:
+      - browser_navigate
+      - browser_screenshot
+      - browser_click
+    related_servers:
+      - context7
+  
+  github:
+    purpose: "GitHub integration"
+    covers_technologies:
+      - git
+      - github
+      - repository
+      - issues
+      - prs
+    when_to_use: "GitHub API operations, issues, PRs, code search"
+    tools_preview:
+      - create_issue
+      - create_pull_request
+      - search_repositories
+    related_servers:
+      - context7
+  
+  fetch:
+    purpose: "HTTP client for web requests"
+    covers_technologies:
+      - http
+      - api
+      - fetch
+      - download
+      - requests
+    when_to_use: "Simple HTTP requests, API calls"
+    tools_preview:
+      - fetch
+    related_servers:
+      - context7
+  
+  desktop-commander:
+    purpose: "Desktop automation and file system"
+    covers_technologies:
+      - file
+      - folder
+      - directory
+      - command
+      - shell
+    when_to_use: "File management, command execution, process control"
+    tools_preview:
+      - read_file
+      - write_file
+      - execute_command
+    related_servers: []
+  
+  sequential-thinking:
+    purpose: "Structured problem-solving through sequential reasoning"
+    covers_technologies:
+      - reasoning
+      - planning
+      - analysis
+      - thinking
+    when_to_use: "Complex multi-step analysis and planning"
+    tools_preview:
+      - think
+      - analyze
+      - plan
+    related_servers: []

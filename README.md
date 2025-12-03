@@ -1,10 +1,10 @@
-# Docker MCP Orchestrator
+# Docker MCP Orchestrator v2.0
 
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
 
-**Reduce MCP token usage by 90%+** — Load Docker MCP servers on-demand instead of exposing all tools at once.
+**Reduce MCP token usage by 90%+** — Smart orchestrator with automatic discovery, semantic routing, and on-demand activation.
 
 [🇷🇺 Документация на русском](docs/README_RU.md)
 
@@ -30,34 +30,37 @@ When using **Docker MCP Toolkit** with Cursor, Claude Desktop, or other MCP clie
 └─────────────────────────────────────────────────────────┘
 ```
 
-## ✅ The Solution
+## ✅ The Solution v2.0
 
-**Docker MCP Orchestrator** acts as a lightweight meta-server that:
+**Docker MCP Orchestrator v2.0** is a smart orchestrator that:
 
-1. **Exposes only 8 orchestration tools** (instead of 100+)
-2. **Enables/disables servers on-demand** via Docker MCP CLI
-3. **Provides a server catalog** so the LLM knows what's available
-4. **Supports hot-reload** through Docker MCP Gateway
+1. **Automatically discovers** all MCP servers from Docker MCP Toolkit
+2. **Provides compact catalog** (~800-1200 tokens) instead of full tool definitions
+3. **Smart recommendations** using keyword + semantic analysis
+4. **On-demand activation** - only load tools you need
+5. **Auto-dependencies** - automatically activates context7 for documentation
+6. **Server profiles** - ready-made combinations for common tasks
+7. **Usage monitoring** - tracks and optimizes server usage
 
 ```
-✅ After: 8 tools + on-demand loading
+✅ After: 8 tools + compact catalog + on-demand activation
 ┌─────────────────────────────────────────────────────────┐
 │                      CURSOR                              │
-│  Context: ~8 orchestrator tools                         │
-│  Typical: 500-2,000 tokens/request (90%+ reduction)     │
+│  Context: ~8 orchestrator tools (~500 tokens)           │
+│  + Compact catalog (~1200 tokens)                       │
+│  + Only activated servers (~2000 tokens)                │
+│  Typical: 3,000-4,000 tokens/request (90%+ reduction)   │
 └─────────────────────────────────────────────────────────┘
                            │
                            ▼
 ┌─────────────────────────────────────────────────────────┐
-│              Docker MCP Orchestrator                       │
-│   • list_available_servers()                            │
-│   • activate_server(name)                               │
-│   • deactivate_server(name)                             │
-│   • activate_for_task(description)                      │
-│   • get_active_servers()                                │
-│   • deactivate_all()                                    │
-│   • server_info(name)                                   │
-│   • sync_state()                                        │
+│              Docker MCP Orchestrator v2.0                 │
+│   • get_capabilities() - Compact catalog                 │
+│   • suggest_servers(task) - Smart recommendations        │
+│   • activate_servers([]) - On-demand activation         │
+│   • activate_profile(name) - Predefined profiles        │
+│   • monitor_usage() - Usage statistics                  │
+│   • optimize_servers() - Auto-cleanup                   │
 └─────────────────────────────────────────────────────────┘
                            │
         subprocess: docker mcp server enable/disable
@@ -73,9 +76,10 @@ When using **Docker MCP Toolkit** with Cursor, Claude Desktop, or other MCP clie
 
 | Scenario | Before | After | Savings |
 |----------|--------|-------|---------|
-| Simple query | ~17,000 | ~800 | **95%** |
-| 1 active server | ~17,000 | ~2,500 | **85%** |
-| 3 active servers | ~17,000 | ~6,000 | **65%** |
+| Simple query | ~17,000 | ~1,700 | **90%** |
+| 1 active server | ~17,000 | ~3,200 | **81%** |
+| 3 active servers | ~17,000 | ~5,000 | **71%** |
+| With optimization | ~17,000 | ~2,500 | **85%** |
 
 ## 🚀 Quick Start
 
@@ -139,53 +143,79 @@ docker mcp server disable context7 playwright github fetch \
 
 ## 📖 Usage
 
-### List Available Servers
+### 1. Get Compact Catalog
 
 ```
 User: What MCP servers can I use?
-AI: [calls list_available_servers()]
+AI: [calls get_capabilities()]
+    Returns: Compact catalog with metadata (~1200 tokens)
 ```
 
-### Activate a Server
+### 2. Smart Recommendations
 
 ```
-User: I need to take a screenshot of a website
-AI: [calls activate_server("playwright", "Screenshot capture")]
-    [uses browser_navigate, browser_screenshot tools]
+User: I need to set up Redis cache for FastAPI
+AI: [calls suggest_servers("Redis cache for FastAPI")]
+    Returns: 
+      - context7 (0.95) - Documentation
+      - redis (0.90) - Operations
 ```
 
-### Auto-Select Servers for Task
+### 3. Activate Servers
 
 ```
-User: Research React docs and create a GitHub issue with findings
-AI: [calls activate_for_task("research docs and create GitHub issue")]
-    # Auto-activates: context7, github
+AI: [calls activate_servers(["context7", "redis"])]
+    Returns: Full tool definitions for activated servers
+    (~2500 tokens instead of 17000!)
 ```
 
-### Cleanup
+### 4. Use Profiles
 
 ```
-User: Done with browser tasks
-AI: [calls deactivate_server("playwright")]
+User: I'm doing web development
+AI: [calls activate_profile("web-development")]
+    Activates: playwright, github, context7, fetch
+```
 
-User: Clean up all servers
-AI: [calls deactivate_all()]
+### 5. Monitor and Optimize
+
+```
+AI: [calls monitor_usage()]
+    Shows: Usage statistics and recommendations
+
+AI: [calls optimize_servers()]
+    Deactivates: Unused servers (>10 min idle)
 ```
 
 ## 🛠️ Available Tools
 
+### Core Tools (v2.0)
+
 | Tool | Description |
 |------|-------------|
-| `list_available_servers()` | Catalog of all MCP servers with descriptions |
-| `get_active_servers()` | Currently enabled servers and their tools |
-| `activate_server(name, reason)` | Enable a specific MCP server |
-| `deactivate_server(name)` | Disable a specific MCP server |
-| `activate_for_task(desc)` | Auto-detect and activate servers for a task |
-| `deactivate_all()` | Disable all active servers |
-| `server_info(name)` | Detailed info about a specific server |
-| `sync_state()` | Sync state with Docker MCP Toolkit |
+| `get_capabilities()` | Compact catalog of all servers (~1200 tokens) |
+| `suggest_servers(task)` | Smart recommendations with confidence scores |
+| `activate_servers([])` | Activate servers and get full tools |
+| `activate_profile(name)` | Activate predefined profile |
+| `activate_for_task(desc)` | Smart task-based activation |
+| `deactivate_servers([])` | Deactivate specific servers |
+| `get_status()` | Current orchestrator state |
+| `monitor_usage()` | Usage statistics and recommendations |
+| `optimize_servers()` | Auto-deactivate unused servers |
+
+### Legacy Tools (for compatibility)
+
+| Tool | Description |
+|------|-------------|
+| `list_available_servers()` | Legacy catalog (use get_capabilities) |
+| `activate_server(name)` | Legacy single activation |
+| `deactivate_server(name)` | Legacy single deactivation |
+| `server_info(name)` | Detailed server information |
+| `sync_state()` | Sync with Docker MCP Toolkit |
 
 ## 📦 Supported Servers
+
+The orchestrator **automatically discovers** all servers from Docker MCP Toolkit. Popular servers include:
 
 | Server | Category | Description |
 |--------|----------|-------------|
@@ -200,17 +230,27 @@ AI: [calls deactivate_all()]
 
 ### Adding Custom Servers
 
-Edit `src/mcp_orchestrator/server.py`:
+Servers are **automatically discovered** from Docker MCP Toolkit. To customize metadata, edit `capabilities/base.yaml`:
 
-```python
-MCP_SERVER_REGISTRY["my-server"] = MCPServerConfig(
-    name="my-server",
-    description="What this server does",
-    tools_summary="tool1, tool2, tool3",
-    category="custom",
-    estimated_tools=5
-)
+```yaml
+servers:
+  my-server:
+    purpose: "What this server does"
+    covers_technologies: ["tech1", "tech2"]
+    when_to_use: "When to use this server"
+    related_servers: ["context7"]  # Auto-activate with
 ```
+
+## 🎯 Server Profiles
+
+Predefined profiles for common tasks:
+
+- **web-development**: playwright, github, context7, fetch
+- **data-science**: postgres, redis, context7
+- **documentation**: context7
+- **database**: postgres, redis, context7
+- **browser-automation**: playwright, context7
+- **full-stack**: all servers (requires confirmation)
 
 ## ⚠️ Known Limitations
 
@@ -254,6 +294,8 @@ Contributions are welcome! Please:
 1. Fork the repository
 2. Create a feature branch
 3. Submit a pull request
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## 📄 License
 
