@@ -1,14 +1,14 @@
 #!/bin/bash
-# GitHub Repository Setup Script for MCP Lazy Orchestrator
+# GitHub Repository Setup Script for Docker MCP Orchestrator
 # Run this script after cloning or downloading the project
 
 set -e
 
-REPO_NAME="mcp-lazy-orchestrator"
+REPO_NAME="docker-mcp-orchestrator"
 GITHUB_USER="semenovsd"
 
 echo "=============================================="
-echo "  MCP Lazy Orchestrator - GitHub Setup"
+echo "  Docker MCP Orchestrator - GitHub Setup"
 echo "=============================================="
 echo ""
 
