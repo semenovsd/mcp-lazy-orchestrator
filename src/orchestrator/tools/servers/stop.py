@@ -1,11 +1,15 @@
 """Stop servers tool."""
 
+import logging
 from typing import Any
 
 from mcp.types import Tool
 
 from ...docker_client import DockerMCPClient
+from ...exceptions import CommandError
 from ...proxy import ToolProxy
+
+logger = logging.getLogger(__name__)
 
 
 def get_tool() -> Tool:
@@ -52,13 +56,20 @@ async def handle_tool(
         proxy.unregister_server(server)
 
     # Disable servers through Docker MCP Toolkit
-    success = await docker_client.disable_servers(servers)
-
-    if success:
+    try:
+        await docker_client.disable_servers(servers)
         return {"status": "success", "servers": servers}
-    else:
+    except CommandError as e:
+        logger.error(f"Failed to disable servers: {e}")
         return {
             "status": "error",
-            "error": "Failed to disable servers",
+            "error": f"Failed to disable servers: {str(e)}",
+            "servers": servers,
+        }
+    except Exception as e:
+        logger.error(f"Unexpected error disabling servers: {e}", exc_info=True)
+        return {
+            "status": "error",
+            "error": f"Unexpected error: {str(e)}",
             "servers": servers,
         }

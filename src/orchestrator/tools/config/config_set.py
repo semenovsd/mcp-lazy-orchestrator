@@ -1,10 +1,14 @@
 """Config set tool."""
 
+import logging
 from typing import Any
 
 from mcp.types import Tool
 
 from ...docker_client import DockerMCPClient
+from ...exceptions import CommandError
+
+logger = logging.getLogger(__name__)
 
 
 def get_tool() -> Tool:
@@ -51,16 +55,22 @@ async def handle_tool(
 
     # Note: Docker MCP config write may need server-specific handling
     # For now, we'll write to global config
-    success = await docker_client.config_write(config)
-
-    if success:
+    try:
+        await docker_client.config_write(config)
         return {
             "status": "success",
             "server": server,
             "config": config,
         }
-    else:
+    except CommandError as e:
+        logger.error(f"Failed to write configuration: {e}")
         return {
             "status": "error",
-            "error": "Failed to write configuration",
+            "error": f"Failed to write configuration: {str(e)}",
+        }
+    except Exception as e:
+        logger.error(f"Unexpected error writing configuration: {e}", exc_info=True)
+        return {
+            "status": "error",
+            "error": f"Unexpected error: {str(e)}",
         }

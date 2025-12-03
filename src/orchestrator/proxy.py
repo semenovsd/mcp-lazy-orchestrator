@@ -3,12 +3,7 @@
 import logging
 from typing import Any, Dict, List, Optional
 
-# MCP imports - may need adjustment based on actual MCP library API
-try:
-    from mcp import ClientSession
-except ImportError:
-    ClientSession = None
-
+from .exceptions import ConnectionError, ToolNotFoundError
 from .models import Tool
 
 logger = logging.getLogger(__name__)
@@ -53,6 +48,8 @@ class ToolProxy:
             for tool in tools:
                 self._tool_to_server.pop(tool.name, None)
             self._server_tools.pop(server, None)
+            # Invalidate server cache
+            self._pool.invalidate_server_cache(server)
             logger.info(f"Unregistered server {server}")
 
     def get_server_for_tool(self, tool_name: str) -> Optional[str]:
@@ -86,37 +83,23 @@ class ToolProxy:
             logger.error(error)
             return None, error
 
-        connection = await self._pool.get_connection(server)
-        if not connection:
-            error = f"Failed to get connection to server {server}"
-            logger.error(error)
-            # Try to reconnect
-            connection = await self._pool.reconnect(server)
-            if not connection:
-                return None, error
-
         try:
-            # Call tool through MCP protocol
-            # Note: Actual MCP API may differ - adjust based on library version
-            if hasattr(connection, 'call_tool'):
-                result = await connection.call_tool(tool_name, arguments)
-            else:
-                # Fallback if API is different
-                result = await connection.call_tool(tool_name, arguments)
+            # Call tool through CLI via connection pool
+            result = await self._pool.call_tool_via_cli(tool_name, arguments, server)
             return result, None
+        except ToolNotFoundError as e:
+            error = str(e)
+            logger.error(error)
+            return None, error
+        except ConnectionError as e:
+            error = str(e)
+            logger.error(error)
+            # Invalidate server cache on connection error
+            await self._pool.invalidate_server_cache(server)
+            return None, error
         except Exception as e:
             error = f"Error calling tool {tool_name} on server {server}: {str(e)}"
-            logger.error(error)
-            # Try to reconnect and retry once
-            connection = await self._pool.reconnect(server)
-            if connection:
-                try:
-                    result = await connection.call_tool(tool_name, arguments)
-                    return result, None
-                except Exception as retry_error:
-                    error = f"Error on retry: {str(retry_error)}"
-                    logger.error(error)
-                    return None, error
+            logger.error(error, exc_info=True)
             return None, error
 
     def list_active_tools(self) -> List[Tool]:

@@ -1,169 +1,201 @@
-"""MCP Connection Pool for managing connections to MCP servers."""
+"""MCP Connection Pool for managing server state and CLI tool calls."""
 
 import asyncio
 import logging
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
-# MCP imports - these may need adjustment based on actual MCP library API
-try:
-    from mcp import ClientSession, StdioServerParameters
-    from mcp.client.stdio import stdio_client
-except ImportError:
-    # Fallback if MCP API is different
-    ClientSession = None
-    StdioServerParameters = None
-    stdio_client = None
+from .docker_client import DockerMCPClient
+from .exceptions import ConnectionError, ServerNotFoundError, ToolNotFoundError
 
 logger = logging.getLogger(__name__)
 
 
+class ServerInfo:
+    """Information about a server."""
+
+    def __init__(self, name: str, is_active: bool = False):
+        """
+        Initialize server info.
+
+        Args:
+            name: Server name
+            is_active: Whether server is active
+        """
+        self.name = name
+        self.is_active = is_active
+        self.last_checked: Optional[float] = None
+
+
 class MCPConnectionPool:
-    """Pool for managing MCP connections to servers."""
+    """Pool for managing server state and CLI tool calls."""
 
     def __init__(
         self,
+        docker_client: DockerMCPClient,
         connection_timeout: int = 30,
         reconnect_attempts: int = 3,
         reconnect_delay: int = 1,
+        status_check_ttl: int = 30,
     ):
         """
         Initialize connection pool.
 
         Args:
+            docker_client: DockerMCPClient instance
             connection_timeout: Connection timeout in seconds
             reconnect_attempts: Number of reconnection attempts
             reconnect_delay: Delay between reconnection attempts in seconds
+            status_check_ttl: TTL for server status cache in seconds
         """
+        self.docker_client = docker_client
         self.connection_timeout = connection_timeout
         self.reconnect_attempts = reconnect_attempts
         self.reconnect_delay = reconnect_delay
+        self.status_check_ttl = status_check_ttl
 
-        self._connections: Dict[str, ClientSession] = {}
-        self._connection_params: Dict[str, StdioServerParameters] = {}
+        # Cache server status information
+        self._server_info: Dict[str, ServerInfo] = {}
         self._lock = asyncio.Lock()
 
-    async def get_connection(self, server: str) -> Optional[ClientSession]:
+    async def get_server_info(self, server: str) -> Optional[ServerInfo]:
         """
-        Get connection to a server, create if not exists.
+        Get information about a server, checking status if needed.
 
         Args:
             server: Server name
 
         Returns:
-            ClientSession or None if connection failed
+            ServerInfo or None if server not found
+
+        Raises:
+            ServerNotFoundError: If server is not found
         """
         async with self._lock:
-            if server in self._connections:
-                session = self._connections[server]
-                # Check if connection is still alive
-                if session.is_connected():
-                    return session
-                else:
-                    # Remove dead connection
-                    logger.warning(f"Connection to {server} is dead, removing...")
-                    self._connections.pop(server, None)
+            # Check cache first
+            if server in self._server_info:
+                info = self._server_info[server]
+                # Check if cache is still valid
+                import time
 
-            # Create new connection
-            return await self._create_connection(server)
+                if info.last_checked and (time.time() - info.last_checked) < self.status_check_ttl:
+                    return info
 
-    async def _create_connection(self, server: str) -> Optional[ClientSession]:
+            # Check server status
+            is_active = await self._check_server_status(server)
+            if is_active is None:
+                # Server not found
+                if server in self._server_info:
+                    # Remove from cache
+                    self._server_info.pop(server, None)
+                raise ServerNotFoundError(server)
+
+            # Update cache
+            import time
+
+            info = ServerInfo(server, is_active=is_active)
+            info.last_checked = time.time()
+            self._server_info[server] = info
+
+            return info
+
+    async def _check_server_status(self, server: str) -> Optional[bool]:
         """
-        Create MCP connection to a server.
+        Check if a server is active.
 
         Args:
             server: Server name
 
         Returns:
-            ClientSession or None if connection failed
+            True if active, False if inactive, None if not found
         """
-        if ClientSession is None:
-            logger.error("MCP ClientSession not available - check MCP library installation")
+        try:
+            active_servers = await self.docker_client.get_active_servers()
+            return server in active_servers
+        except Exception as e:
+            logger.error(f"Error checking server status for {server}: {e}")
             return None
 
-        # Get server parameters (this needs to be determined based on Docker MCP Toolkit)
-        # For now, we'll use a placeholder approach
-        # In production, this should get the actual server parameters from Docker MCP Toolkit
-
-        # TODO: Determine how to get server connection parameters
-        # Options:
-        # 1. Through Docker MCP Toolkit gateway API
-        # 2. Through Docker container inspection
-        # 3. Through configuration file
-
-        # Placeholder: Assume servers are accessible through Docker MCP Toolkit gateway
-        # This will need to be implemented based on actual Docker MCP Toolkit API
-
-        logger.warning(
-            f"Connection creation for {server} - placeholder implementation. "
-            "Need to determine actual connection mechanism."
-        )
-
-        # For now, return None - this will be implemented when we understand
-        # how Docker MCP Toolkit exposes server connections
-        return None
-
-    async def remove_connection(self, server: str):
+    async def call_tool_via_cli(self, tool_name: str, arguments: Dict[str, Any], server: str) -> Any:
         """
-        Remove connection to a server.
+        Call a tool through CLI.
+
+        Args:
+            tool_name: Tool name
+            arguments: Tool arguments
+            server: Server name (for validation)
+
+        Returns:
+            Tool result
+
+        Raises:
+            ConnectionError: If server is not active
+            ToolNotFoundError: If tool is not found
+        """
+        # Check server status first
+        server_info = await self.get_server_info(server)
+        if not server_info or not server_info.is_active:
+            raise ConnectionError(
+                server,
+                reason="Server is not active. Use start_servers() to enable it.",
+            )
+
+        # Call tool through CLI
+        try:
+            result = await self.docker_client.call_tool(tool_name, arguments)
+            return result
+        except ToolNotFoundError:
+            raise
+        except Exception as e:
+            # Check if server became inactive
+            is_active = await self._check_server_status(server)
+            if not is_active:
+                raise ConnectionError(
+                    server,
+                    reason="Server became inactive during tool call",
+                ) from e
+            raise
+
+    async def invalidate_server_cache(self, server: str):
+        """
+        Invalidate cache for a server.
 
         Args:
             server: Server name
         """
         async with self._lock:
-            if server in self._connections:
-                session = self._connections[server]
-                try:
-                    await session.__aexit__(None, None, None)
-                except Exception as e:
-                    logger.error(f"Error closing connection to {server}: {e}")
-                finally:
-                    self._connections.pop(server, None)
-                    self._connection_params.pop(server, None)
+            self._server_info.pop(server, None)
 
-    async def close_all(self):
-        """Close all connections."""
+    async def invalidate_all_cache(self):
+        """Invalidate all server caches."""
         async with self._lock:
-            for server, session in list(self._connections.items()):
-                try:
-                    await session.__aexit__(None, None, None)
-                except Exception as e:
-                    logger.error(f"Error closing connection to {server}: {e}")
-            self._connections.clear()
-            self._connection_params.clear()
+            self._server_info.clear()
 
-    def is_connected(self, server: str) -> bool:
+    def is_server_active(self, server: str) -> bool:
         """
-        Check if connection to server exists and is alive.
+        Check if server is active (from cache, may be stale).
 
         Args:
             server: Server name
 
         Returns:
-            True if connected, False otherwise
+            True if active (cached), False otherwise
         """
-        if server not in self._connections:
+        if server not in self._server_info:
             return False
-        return self._connections[server].is_connected()
+        return self._server_info[server].is_active
 
-    async def reconnect(self, server: str) -> Optional[ClientSession]:
+    async def ensure_server_active(self, server: str) -> bool:
         """
-        Reconnect to a server.
+        Ensure server is active, checking status if needed.
 
         Args:
             server: Server name
 
         Returns:
-            ClientSession or None if reconnection failed
+            True if active, False otherwise
+
+        Raises:
+            ServerNotFoundError: If server is not found
         """
-        await self.remove_connection(server)
-
-        for attempt in range(self.reconnect_attempts):
-            logger.info(f"Reconnecting to {server} (attempt {attempt + 1}/{self.reconnect_attempts})")
-            connection = await self._create_connection(server)
-            if connection:
-                return connection
-            if attempt < self.reconnect_attempts - 1:
-                await asyncio.sleep(self.reconnect_delay * (2 ** attempt))
-
-        logger.error(f"Failed to reconnect to {server} after {self.reconnect_attempts} attempts")
-        return None
+        server_info = await self.get_server_info(server)
+        return server_info.is_active if server_info else False

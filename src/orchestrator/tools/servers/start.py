@@ -1,14 +1,18 @@
 """Start servers tool."""
 
+import logging
 from typing import Any
 
 from mcp.types import Tool
 
 from ...cache import MetadataCache
 from ...docker_client import DockerMCPClient
+from ...exceptions import CommandError, ServerNotFoundError
 from ...models import StartServersResult
 from ...prompt_manager import PromptManager
 from ...proxy import ToolProxy
+
+logger = logging.getLogger(__name__)
 
 
 def get_tool() -> Tool:
@@ -61,11 +65,21 @@ async def handle_tool(
         }
 
     # Enable servers through Docker MCP Toolkit
-    success = await docker_client.enable_servers(servers)
-    if not success:
+    try:
+        await docker_client.enable_servers(servers)
+    except CommandError as e:
         return {
             "status": "error",
-            "error": "Failed to enable servers through Docker MCP Toolkit",
+            "error": f"Failed to enable servers: {str(e)}",
+            "servers": [],
+            "tools": [],
+            "prompts": {},
+        }
+    except Exception as e:
+        logger.error(f"Unexpected error enabling servers: {e}", exc_info=True)
+        return {
+            "status": "error",
+            "error": f"Unexpected error: {str(e)}",
             "servers": [],
             "tools": [],
             "prompts": {},
@@ -91,9 +105,15 @@ async def handle_tool(
                 successful_servers.append(server)
             else:
                 errors[server] = "No tools found or server not responding"
+        except ServerNotFoundError as e:
+            errors[server] = f"Server not found: {str(e)}"
+            logger.error(f"Server not found: {server}")
+        except CommandError as e:
+            errors[server] = f"Command error: {str(e)}"
+            logger.error(f"Command error for server {server}: {e}")
         except Exception as e:
-            errors[server] = str(e)
-            logger.error(f"Error starting server {server}: {e}")
+            errors[server] = f"Unexpected error: {str(e)}"
+            logger.error(f"Error starting server {server}: {e}", exc_info=True)
 
     # Get prompts for successful servers
     prompts = await prompt_manager.get_prompts_for_servers(successful_servers)
@@ -119,8 +139,3 @@ async def handle_tool(
         result["errors"] = errors
 
     return result
-
-
-import logging
-
-logger = logging.getLogger(__name__)

@@ -11,6 +11,7 @@ from mcp.types import Tool
 from .cache import MetadataCache
 from .connection_pool import MCPConnectionPool
 from .docker_client import DockerMCPClient
+from .exceptions import DockerMCPError
 from .prompt_manager import PromptManager
 from .proxy import ToolProxy
 
@@ -77,9 +78,11 @@ class OrchestratorServer:
 
         proxy_config = self.config.get("orchestrator", {}).get("proxy", {})
         self.connection_pool = MCPConnectionPool(
+            docker_client=self.docker_client,
             connection_timeout=proxy_config.get("connection_timeout", 30),
             reconnect_attempts=proxy_config.get("reconnect_attempts", 3),
             reconnect_delay=proxy_config.get("reconnect_delay", 1),
+            status_check_ttl=proxy_config.get("status_check_ttl", 30),
         )
 
         self.proxy = ToolProxy(self.connection_pool)
@@ -234,6 +237,18 @@ class OrchestratorServer:
                         }
                     ]
 
+            except DockerMCPError as e:
+                # Custom exceptions with details
+                error_msg = str(e)
+                if e.details:
+                    error_msg += f"\nDetails: {json.dumps(e.details, indent=2)}"
+                logger.error(f"Error handling tool {name}: {error_msg}", exc_info=True)
+                return [
+                    {
+                        "content": [{"type": "text", "text": error_msg}],
+                        "isError": True,
+                    }
+                ]
             except Exception as e:
                 logger.error(f"Error handling tool {name}: {e}", exc_info=True)
                 return [
