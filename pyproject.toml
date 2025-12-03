@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "mcp-lazy-orchestrator"
+name = "docker-mcp-orchestrator"
 version = "1.0.0"
 description = "Reduce MCP token usage by 90%+ — Load Docker MCP servers on-demand"
 readme = "README.md"
@@ -48,13 +48,13 @@ dev = [
 ]
 
 [project.scripts]
-mcp-lazy-orchestrator = "mcp_orchestrator:main"
+docker-mcp-orchestrator = "mcp_orchestrator:main"
 
 [project.urls]
-Homepage = "https://github.com/semenovsd/mcp-lazy-orchestrator"
-Documentation = "https://github.com/semenovsd/mcp-lazy-orchestrator#readme"
-Repository = "https://github.com/semenovsd/mcp-lazy-orchestrator"
-Issues = "https://github.com/semenovsd/mcp-lazy-orchestrator/issues"
+Homepage = "https://github.com/semenovsd/docker-mcp-orchestrator"
+Documentation = "https://github.com/semenovsd/docker-mcp-orchestrator#readme"
+Repository = "https://github.com/semenovsd/docker-mcp-orchestrator"
+Issues = "https://github.com/semenovsd/docker-mcp-orchestrator/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/mcp_orchestrator"]
