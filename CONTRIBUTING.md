@@ -1,4 +1,4 @@
-# Contributing to MCP Lazy Orchestrator
+# Contributing to Docker MCP Orchestrator
 
 Thank you for your interest in contributing! 🎉
 
@@ -6,7 +6,7 @@ Thank you for your interest in contributing! 🎉
 
 ### Reporting Bugs
 
-1. Check if the bug already exists in [Issues](https://github.com/semenovsd/mcp-lazy-orchestrator/issues)
+1. Check if the bug already exists in [Issues](https://github.com/semenovsd/docker-mcp-orchestrator/issues)
 2. If not, create a new issue with:
    - Clear title
    - Steps to reproduce
@@ -65,8 +65,8 @@ pytest tests/test_orchestrator.py::TestServerRegistry
 
 ```bash
 # Clone
-git clone https://github.com/jorikfat/mcp-lazy-orchestrator.git
-cd mcp-lazy-orchestrator
+git clone https://github.com/semenovsd/docker-mcp-orchestrator.git
+cd docker-mcp-orchestrator
 
 # Install dev dependencies
 pip install -e ".[dev]"
