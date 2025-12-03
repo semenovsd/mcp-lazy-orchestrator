@@ -1,10 +1,10 @@
 """
-MCP Lazy Orchestrator
+Docker MCP Orchestrator
 
 A lightweight MCP server that manages Docker MCP servers on-demand,
 reducing token usage by loading servers only when needed.
 
-Repository: https://github.com/semenovsd/mcp-lazy-orchestrator
+Repository: https://github.com/semenovsd/docker-mcp-orchestrator
 License: CC BY-NC 4.0
 """
 
