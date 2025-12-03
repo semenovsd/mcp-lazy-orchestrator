@@ -1,1 +1,1 @@
-# Tests for MCP Lazy Orchestrator
+# Tests for Docker MCP Orchestrator
