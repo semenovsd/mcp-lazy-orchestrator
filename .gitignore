@@ -34,9 +34,6 @@ htmlcov/
 # Git
 .git/
 
-# Docker
-.dockerignore
-
 # Temporary files
 *.tmp
 *.log
